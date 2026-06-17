@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>業績計算器</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  :root{
+    --bg:#04101d;
+    --panel:#082946;
+    --panel-2:#0f3a61;
+    --border:#1d4d78;
+    --border-soft:#0d3457;
+    --text:#eef2ea;
+    --text-muted:#8ea4bd;
+    --text-dim:#577089;
+    --accent:#BCCF36;
+    --accent-soft:rgba(188,207,54,0.16);
+    --on-accent:#082946;
+    --cat-edit:#BCCF36;
+    --cat-op:#8a9a2e;
+    --cat-shoot:#6cb2e8;
+    --int-soft:rgba(108,178,232,0.16);
+    --danger:#ff8a8a;
+    --radius:10px;
+    --mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans:'Noto Sans TC', system-ui, -apple-system, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+
+  .app{ max-width:1040px; margin:0 auto; padding:28px 20px 60px; }
+
+  .storage-banner{
+    background:rgba(255,138,138,0.1); border-bottom:1px solid rgba(255,138,138,0.3);
+    color:var(--danger); font-size:12.5px; text-align:center; padding:8px 16px;
+  }
+
+  /* ---------- Topbar ---------- */
+  .topbar{ display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:22px; flex-wrap:wrap; }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand-mark{
+    font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:0.06em;
+    color:var(--accent); border:1px solid var(--accent); border-radius:4px; padding:3px 6px;
+  }
+  .brand-mark .dot{
+    display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent);
+    margin-right:5px; animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.25;} }
+  .brand h1{ font-size:18px; font-weight:900; margin:0; letter-spacing:0.01em; }
+
+  .year-switch{ display:flex; align-items:center; gap:10px; background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:6px 10px; }
+  .year-switch button{ background:none; border:none; color:var(--text-muted); font-size:16px; cursor:pointer; padding:2px 6px; border-radius:4px; }
+  .year-switch button:hover{ background:var(--panel-2); color:var(--text); }
+  .year-switch .year-label{ font-family:var(--mono); font-weight:700; font-size:14px; min-width:48px; text-align:center; }
+
+  /* ---------- Stat cards ---------- */
+  .stat-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:14px; }
+  .stat-card{ background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; }
+  .stat-card .label{ font-size:12px; color:var(--text-muted); margin-bottom:8px; }
+  .stat-card .value{ font-family:var(--mono); font-size:26px; font-weight:700; }
+  .stat-card .value .cur{ font-size:14px; color:var(--text-dim); margin-right:4px; }
+  .stat-card .value-split{ display:flex; gap:12px; margin-top:8px; font-size:11px; font-family:var(--mono); color:var(--text-muted); }
+  .stat-card .value-split b{ color:var(--text); font-weight:700; }
+  .stat-card .value-split .vs-actual b{ color:var(--accent); }
+  .stat-card .value-split .vs-planned b{ color:var(--cat-shoot); }
+
+  .stat-row-2{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:22px; }
+  .mini-stat{ background:var(--panel-2); border:1px solid var(--border-soft); border-radius:var(--radius); padding:14px 16px; text-align:center; }
+  .mini-stat .num{ font-family:var(--mono); font-size:22px; font-weight:700; color:var(--accent); }
+  .mini-stat .lbl{ font-size:11.5px; color:var(--text-muted); margin-top:4px; }
+
+  /* ---------- Month tabs ---------- */
+  .month-tabs{ display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin-bottom:22px; }
+  .month-tab{
+    position:relative; background:var(--panel); border:1px solid var(--border); border-radius:8px;
+    padding:10px 6px; text-align:center; cursor:pointer; font-size:13px; font-weight:700; color:var(--text-muted);
+  }
+  .month-tab .sub{ display:block; font-size:10.5px; font-weight:400; color:var(--text-dim); margin-top:2px; font-family:var(--mono); }
+  .month-tab:hover{ border-color:var(--border-soft); color:var(--text); }
+  .month-tab.active{ background:var(--accent); color:var(--on-accent); border-color:var(--accent); }
+  .month-tab.active .sub{ color:rgba(8,41,70,0.65); }
+  .month-tab .dot{
+    position:absolute; top:6px; right:8px; width:6px; height:6px; border-radius:50%; background:var(--accent);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  .month-tab.active .dot{ background:var(--on-accent); }
+
+  /* ---------- Main grid ---------- */
+  .main-grid{ display:grid; grid-template-columns:340px 1fr; gap:18px; align-items:start; }
+  @media (max-width: 760px){ .main-grid{ grid-template-columns:1fr; } .stat-row, .stat-row-2{ grid-template-columns:1fr; } .month-tabs{ grid-template-columns:repeat(3,1fr); } }
+
+  .panel{ background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:18px; }
+  .panel h2{ font-size:14px; font-weight:700; margin:0 0 14px; color:var(--text); }
+  .panel h2 .hint{ font-size:11px; font-weight:400; color:var(--text-dim); margin-left:8px; }
+
+  /* type chips */
+  .type-chips{ display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+  .type-chip{
+    display:flex; align-items:center; gap:10px; background:var(--panel-2); border:1px solid var(--border-soft);
+    border-radius:8px; padding:10px 12px; cursor:pointer; font-size:13px;
+  }
+  .type-chip .swatch{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .type-chip .name{ font-weight:700; flex:1; }
+  .type-chip .price{ font-family:var(--mono); color:var(--text-muted); font-size:12px; }
+  .type-chip.active{ border-color:var(--accent); background:var(--accent-soft); }
+
+  .io-toggle{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+  .io-btn{ padding:10px; border-radius:8px; border:1px solid var(--border-soft); background:var(--panel-2); color:var(--text-muted); font-weight:700; font-size:13px; cursor:pointer; text-align:center; }
+  .io-btn.active.ext{ background:var(--accent); color:var(--on-accent); border-color:var(--accent); }
+  .io-btn.active.int{ background:var(--cat-shoot); color:#04101d; border-color:var(--cat-shoot); }
+
+  .status-toggle{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+  .status-btn{ padding:10px; border-radius:8px; border:1px solid var(--border-soft); background:var(--panel-2); color:var(--text-muted); font-weight:700; font-size:13px; cursor:pointer; text-align:center; }
+  .status-btn.active.planned{ background:rgba(142,164,189,0.18); color:var(--text); border-color:var(--text-muted); }
+  .status-btn.active.actual{ background:var(--accent); color:var(--on-accent); border-color:var(--accent); }
+
+  .field{ margin-bottom:12px; }
+  .field label{ display:block; font-size:11.5px; color:var(--text-muted); margin-bottom:6px; }
+  .field input{
+    width:100%; background:var(--panel-2); border:1px solid var(--border-soft); border-radius:8px;
+    padding:9px 11px; color:var(--text); font-size:13.5px; font-family:var(--sans);
+  }
+  .field input:focus{ outline:none; border-color:var(--accent); }
+  .field input::placeholder{ color:var(--text-dim); }
+
+  .qty-row{ display:flex; align-items:center; gap:10px; }
+  .qty-row button{
+    width:30px; height:30px; border-radius:6px; border:1px solid var(--border-soft); background:var(--panel-2);
+    color:var(--text); font-size:16px; cursor:pointer; line-height:1;
+  }
+  .qty-row .qty-val{ font-family:var(--mono); font-weight:700; font-size:15px; min-width:24px; text-align:center; }
+
+  .submit-btn{
+    width:100%; background:var(--accent); border:none; border-radius:8px; padding:11px;
+    color:var(--on-accent); font-weight:700; font-size:13.5px; cursor:pointer; margin-top:6px;
+  }
+  .submit-btn:hover{ filter:brightness(1.08); }
+
+  /* entries panel */
+  .entries-head{ display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:6px; }
+  .breakdown{ display:flex; gap:14px; font-size:11.5px; color:var(--text-muted); font-family:var(--mono); }
+  .breakdown b{ color:var(--text); }
+
+  .entry-row{
+    display:grid; grid-template-columns:1fr 90px 70px auto; gap:10px; align-items:center;
+    padding:10px 0; border-bottom:1px solid var(--border-soft);
+  }
+  .entry-row:last-child{ border-bottom:none; }
+  .entry-main .ename-row{ display:flex; align-items:center; gap:8px; margin-bottom:3px; }
+  .name-input{
+    background:none; border:none; color:var(--text); font-size:13.5px; font-weight:700; padding:3px 4px;
+    border-radius:4px; width:100%;
+  }
+  .name-input:hover, .name-input:focus{ background:var(--panel-2); outline:none; }
+  .name-input::placeholder{ color:var(--text-dim); font-weight:400; }
+  .io-tag{
+    flex-shrink:0; font-size:10px; font-weight:700; padding:2px 7px; border-radius:10px; cursor:pointer; white-space:nowrap;
+  }
+  .io-tag.ext{ background:var(--accent-soft); color:var(--accent); }
+  .io-tag.int{ background:var(--int-soft); color:var(--cat-shoot); }
+  .status-tag{
+    flex-shrink:0; font-size:10px; font-weight:700; padding:2px 7px; border-radius:10px; cursor:pointer; white-space:nowrap;
+  }
+  .status-tag.planned{ background:rgba(142,164,189,0.16); color:var(--text-muted); }
+  .status-tag.actual{ background:var(--accent-soft); color:var(--accent); }
+  .entry-sub{ font-size:11px; color:var(--text-dim); }
+
+  .price-input, .qty-input{
+    background:none; border:none; color:var(--text); font-family:var(--mono); font-size:13px; text-align:right;
+    padding:4px; border-radius:4px; width:100%;
+  }
+  .price-input:hover, .qty-input:hover, .price-input:focus, .qty-input:focus{ background:var(--panel-2); outline:none; }
+
+  .entry-subtotal{ font-family:var(--mono); font-weight:700; font-size:13.5px; text-align:right; }
+  .entry-del{ background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:15px; padding:4px; }
+  .entry-del:hover{ color:var(--danger); }
+
+  .empty-state{ text-align:center; padding:50px 10px; color:var(--text-dim); font-size:13px; }
+
+  /* year summary */
+  .year-summary{
+    margin-top:18px; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);
+    padding:16px 18px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px;
+  }
+  .year-summary .ys-left{ display:flex; align-items:baseline; gap:10px; }
+  .year-summary .ys-left .lbl{ font-size:12px; color:var(--text-muted); }
+  .year-summary .ys-left .val{ font-family:var(--mono); font-size:20px; font-weight:700; color:var(--accent); }
+  .year-summary .ys-right{ display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--text-muted); font-family:var(--mono); }
+  .year-summary .ys-right b{ color:var(--text); }
+
+  .status-toast{
+    position:fixed; bottom:18px; right:18px; background:var(--panel-2); border:1px solid var(--border);
+    color:var(--text); font-size:12.5px; padding:8px 14px; border-radius:8px; opacity:0; transform:translateY(8px);
+    transition:opacity .25s, transform .25s; pointer-events:none;
+  }
+  .status-toast.show{ opacity:1; transform:translateY(0); }
+  .status-toast.err{ color:var(--danger); border-color:rgba(255,138,138,0.4); }
+</style>
+</head>
+<body>
+
+<div class="storage-banner" id="storageBanner" style="display:none">
+  ⚠ 目前瀏覽器無法使用儲存功能，資料只會留在這次畫面中，重新整理頁面就會消失。
+</div>
+
+<div class="app">
+  <div class="topbar">
+    <div class="brand">
+      <span class="brand-mark"><span class="dot"></span>REC</span>
+      <h1>業績計算器</h1>
+    </div>
+    <div class="year-switch">
+      <button id="yearPrev">‹</button>
+      <span class="year-label" id="yearLabel">2026</span>
+      <button id="yearNext">›</button>
+    </div>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat-card">
+      <div class="label">外部營收</div>
+      <div class="value"><span class="cur">NT$</span><span id="statExt">0</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="label">內部貢獻值</div>
+      <div class="value"><span class="cur">NT$</span><span id="statInt">0</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="label" id="monthTotalLabel">6月 團隊總產值（本月）</div>
+      <div class="value"><span class="cur">NT$</span><span id="statTotal">0</span></div>
+      <div class="value-split">
+        <span class="vs-actual">已發生 $<b id="statActual">0</b></span>
+        <span class="vs-planned">預計 $<b id="statPlanned">0</b></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="stat-row-2">
+    <div class="mini-stat"><div class="num" id="statScripts">0</div><div class="lbl">支腳本</div></div>
+    <div class="mini-stat"><div class="num" id="statVideos">0</div><div class="lbl">支影片</div></div>
+    <div class="mini-stat"><div class="num" id="statShoots">0</div><div class="lbl">次拍攝</div></div>
+  </div>
+
+  <div class="month-tabs" id="monthTabs"></div>
+
+  <div class="main-grid">
+    <div class="panel">
+      <h2>新增案件</h2>
+      <div class="type-chips" id="typeChips"></div>
+
+      <div class="io-toggle">
+        <button class="io-btn ext" id="ioExtBtn">外部（營收）</button>
+        <button class="io-btn int" id="ioIntBtn">內部（貢獻值）</button>
+      </div>
+
+      <div class="status-toggle">
+        <button class="status-btn planned" id="statusPlannedBtn">預計發生</button>
+        <button class="status-btn actual" id="statusActualBtn">已發生</button>
+      </div>
+
+      <div class="field">
+        <label>案子名稱</label>
+        <input type="text" id="nameField" placeholder="例如：A 品牌 6 月維運">
+      </div>
+      <div class="field">
+        <label>金額</label>
+        <input type="number" id="priceField" inputmode="decimal">
+      </div>
+      <div class="field">
+        <label>數量</label>
+        <div class="qty-row">
+          <button id="qtyMinus">−</button>
+          <span class="qty-val" id="qtyVal">1</span>
+          <button id="qtyPlus">+</button>
+        </div>
+      </div>
+
+      <button class="submit-btn" id="submitBtn">新增案件</button>
+    </div>
+
+    <div class="panel">
+      <div class="entries-head">
+        <h2>本月明細<span class="hint">（案名、金額、數量可直接點擊修改，內/外標籤點一下可切換）</span></h2>
+        <div class="breakdown" id="breakdown"></div>
+      </div>
+      <div id="entriesBody"></div>
+    </div>
+  </div>
+
+  <div class="year-summary">
+    <div class="ys-left">
+      <span class="lbl" id="yearTotalLabel">年度總產值（2026）</span>
+      <span class="val">NT$<span id="yearTotal">0</span></span>
+    </div>
+    <div class="ys-right">
+      <span>已發生 $<b id="yearActual">0</b></span>
+      <span>預計 $<b id="yearPlanned">0</b></span>
+      <span>外部營收 $<b id="yearExt">0</b></span>
+      <span>內部貢獻 $<b id="yearInt">0</b></span>
+      <span>腳本 <b id="yearScripts">0</b> 支</span>
+      <span>影片 <b id="yearVideos">0</b> 支</span>
+      <span>拍攝 <b id="yearShoots">0</b> 次</span>
+    </div>
+  </div>
+</div>
+
+<div class="status-toast" id="statusToast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- Storage adapter ----------
+  // Uses real browser localStorage so data survives opening the downloaded
+  // HTML file directly (double-click / file://) as well as hosting it on
+  // any web server. This does NOT depend on claude.ai's artifact environment.
+  var STORAGE_PREFIX = 'rev_calc_v1:';
+  var STORAGE_OK = (function(){
+    try{
+      var k = '__rev_calc_test__';
+      window.localStorage.setItem(k, '1');
+      window.localStorage.removeItem(k);
+      return true;
+    }catch(e){ return false; }
+  })();
+
+  var storage = {
+    get: function(key){
+      return new Promise(function(resolve, reject){
+        if (!STORAGE_OK){ reject(new Error('storage unavailable')); return; }
+        var v = window.localStorage.getItem(STORAGE_PREFIX + key);
+        if (v === null){ reject(new Error('not found')); return; }
+        resolve(v);
+      });
+    },
+    set: function(key, value){
+      return new Promise(function(resolve, reject){
+        if (!STORAGE_OK){ reject(new Error('storage unavailable')); return; }
+        try{
+          window.localStorage.setItem(STORAGE_PREFIX + key, value);
+          resolve(true);
+        }catch(e){ reject(e); }
+      });
+    }
+  };
+
+  if (!STORAGE_OK){
+    document.getElementById('storageBanner').style.display = 'block';
+  }
+
+  // ---------- Catalog ----------
+  var CATALOG = [
+    { id:'cut_long',  name:'剪輯案｜長影片', price:6000, swatch:'#BCCF36', scripts:0, videos:1, shoots:0 },
+    { id:'cut_short', name:'剪輯案｜短影片', price:2500, swatch:'#BCCF36', scripts:0, videos:1, shoots:0 },
+    { id:'op',        name:'代操案｜1支（拍攝+腳本+剪輯）', price:6160, swatch:'#6cb2e8', scripts:1, videos:1, shoots:1 },
+    { id:'shoot',     name:'拍攝案｜出機一次', price:5000, swatch:'#8a9a2e', scripts:0, videos:0, shoots:1 }
+  ];
+  var MONTH_NAMES = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+
+  function pad(n){ return n < 10 ? '0' + n : '' + n; }
+  function fmt(n){ return Math.round(n).toLocaleString('en-US'); }
+  function uid(){ return 'e' + Date.now() + Math.random().toString(36).slice(2,8); }
+
+  var now = new Date();
+  var state = {
+    year: now.getFullYear(),
+    month: now.getMonth() + 1,
+    selectedType: CATALOG[0].id,
+    io: 'ext',
+    draft: { name:'', price: CATALOG[0].price, qty: 1, status: 'planned' },
+    records: {},        // { year: { month: [entries] } }
+    loadedYears: {}
+  };
+
+  function getMonthEntries(y, m){
+    if (!state.records[y]) state.records[y] = {};
+    if (!state.records[y][m]) state.records[y][m] = [];
+    return state.records[y][m];
+  }
+
+  function ensureYearLoaded(year){
+    if (state.loadedYears[year]) return Promise.resolve();
+    return storage.get('records:' + year)
+      .then(function(raw){
+        var parsed = raw ? JSON.parse(raw) : {};
+        // Backfill status for entries saved before this field existed,
+        // so old data doesn't silently drop out of the planned/actual split.
+        Object.keys(parsed).forEach(function(m){
+          (parsed[m] || []).forEach(function(e){
+            if (e.status !== 'actual' && e.status !== 'planned') e.status = 'actual';
+          });
+        });
+        state.records[year] = parsed;
+      })
+      .catch(function(){
+        state.records[year] = state.records[year] || {};
+      })
+      .then(function(){ state.loadedYears[year] = true; });
+  }
+
+  function persistYear(year){
+    return storage.set('records:' + year, JSON.stringify(state.records[year] || {}))
+      .then(function(){ showStatus('已儲存'); })
+      .catch(function(){ showStatus('儲存失敗，請重新整理', true); });
+  }
+
+  var toastTimer = null;
+  function showStatus(msg, isErr){
+    var el = document.getElementById('statusToast');
+    el.textContent = msg;
+    el.className = 'status-toast show' + (isErr ? ' err' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ el.className = 'status-toast'; }, 1600);
+  }
+
+  // ---------- Derived stats ----------
+  function computeStats(entries){
+    var ext = 0, intv = 0, scripts = 0, videos = 0, shoots = 0;
+    var plannedTotal = 0, actualTotal = 0;
+    entries.forEach(function(e){
+      var subtotal = e.price * e.qty;
+      if (e.io === 'int') intv += subtotal; else ext += subtotal;
+      if (e.status === 'actual') actualTotal += subtotal; else plannedTotal += subtotal;
+      var cat = CATALOG.find(function(c){ return c.id === e.typeId; }) || CATALOG[0];
+      scripts += cat.scripts * e.qty;
+      videos += cat.videos * e.qty;
+      shoots += cat.shoots * e.qty;
+    });
+    return { ext:ext, intv:intv, total:ext+intv, scripts:scripts, videos:videos, shoots:shoots,
+      plannedTotal:plannedTotal, actualTotal:actualTotal };
+  }
+
+  function computeYearStats(year){
+    var all = [];
+    var months = state.records[year] || {};
+    Object.keys(months).forEach(function(m){ all = all.concat(months[m] || []); });
+    return computeStats(all);
+  }
+
+  // ---------- Rendering ----------
+  function renderMonthTabs(){
+    var wrap = document.getElementById('monthTabs');
+    wrap.innerHTML = '';
+    var isCurrentYear = state.year === now.getFullYear();
+    MONTH_NAMES.forEach(function(label, idx){
+      var m = idx + 1;
+      var btn = document.createElement('div');
+      btn.className = 'month-tab' + (m === state.month ? ' active' : '');
+      btn.innerHTML = '<span>' + label + '</span><span class="sub">—</span>' +
+        (isCurrentYear && m === now.getMonth()+1 ? '<span class="dot"></span>' : '');
+      btn.addEventListener('click', function(){
+        state.month = m;
+        render();
+      });
+      wrap.appendChild(btn);
+    });
+  }
+
+  function renderTypeChips(){
+    var wrap = document.getElementById('typeChips');
+    wrap.innerHTML = '';
+    CATALOG.forEach(function(cat){
+      var chip = document.createElement('div');
+      chip.className = 'type-chip' + (cat.id === state.selectedType ? ' active' : '');
+      chip.innerHTML =
+        '<span class="swatch" style="background:' + cat.swatch + '"></span>' +
+        '<span class="name">' + cat.name + '</span>' +
+        '<span class="price">NT$' + fmt(cat.price) + '</span>';
+      chip.addEventListener('click', function(){
+        state.selectedType = cat.id;
+        state.draft.price = cat.price;
+        renderTypeChips();
+        renderDraftForm();
+      });
+      wrap.appendChild(chip);
+    });
+  }
+
+  function renderIoToggle(){
+    document.getElementById('ioExtBtn').classList.toggle('active', state.io === 'ext');
+    document.getElementById('ioIntBtn').classList.toggle('active', state.io === 'int');
+  }
+
+  function renderStatusToggle(){
+    document.getElementById('statusPlannedBtn').classList.toggle('active', state.draft.status === 'planned');
+    document.getElementById('statusActualBtn').classList.toggle('active', state.draft.status === 'actual');
+  }
+
+  function renderDraftForm(){
+    document.getElementById('nameField').value = state.draft.name;
+    document.getElementById('priceField').value = state.draft.price;
+    document.getElementById('qtyVal').textContent = state.draft.qty;
+  }
+
+  function renderStats(){
+    var entries = getMonthEntries(state.year, state.month);
+    var s = computeStats(entries);
+    document.getElementById('statExt').textContent = fmt(s.ext);
+    document.getElementById('statInt').textContent = fmt(s.intv);
+    document.getElementById('statTotal').textContent = fmt(s.total);
+    document.getElementById('statActual').textContent = fmt(s.actualTotal);
+    document.getElementById('statPlanned').textContent = fmt(s.plannedTotal);
+    document.getElementById('monthTotalLabel').textContent = MONTH_NAMES[state.month-1] + ' 團隊總產值（本月）';
+    document.getElementById('statScripts').textContent = s.scripts;
+    document.getElementById('statVideos').textContent = s.videos;
+    document.getElementById('statShoots').textContent = s.shoots;
+
+    var byType = {};
+    entries.forEach(function(e){
+      byType[e.typeId] = (byType[e.typeId] || 0) + e.price * e.qty;
+    });
+    var bd = document.getElementById('breakdown');
+    bd.innerHTML = CATALOG.map(function(c){
+      var v = byType[c.id] || 0;
+      if (!v) return '';
+      return '<span>' + c.name.split('｜')[0] + ' <b>$' + fmt(v) + '</b></span>';
+    }).join('');
+  }
+
+  function renderYearSummary(){
+    document.getElementById('yearLabel').textContent = state.year;
+    document.getElementById('yearTotalLabel').textContent = '年度總產值（' + state.year + '）';
+    var s = computeYearStats(state.year);
+    document.getElementById('yearTotal').textContent = fmt(s.total);
+    document.getElementById('yearActual').textContent = fmt(s.actualTotal);
+    document.getElementById('yearPlanned').textContent = fmt(s.plannedTotal);
+    document.getElementById('yearExt').textContent = fmt(s.ext);
+    document.getElementById('yearInt').textContent = fmt(s.intv);
+    document.getElementById('yearScripts').textContent = s.scripts;
+    document.getElementById('yearVideos').textContent = s.videos;
+    document.getElementById('yearShoots').textContent = s.shoots;
+  }
+
+  function catLabel(typeId){
+    var c = CATALOG.find(function(c){ return c.id === typeId; });
+    return c ? c.name.split('｜')[1] || c.name : '';
+  }
+
+  function renderEntries(){
+    var wrap = document.getElementById('entriesBody');
+    var entries = getMonthEntries(state.year, state.month);
+    if (!entries.length){
+      wrap.innerHTML = '<div class="empty-state">這個月還沒有案件，從左側新增一筆。</div>';
+      return;
+    }
+    wrap.innerHTML = '';
+    entries.slice().reverse().forEach(function(e){
+      var row = document.createElement('div');
+      row.className = 'entry-row';
+      row.innerHTML =
+        '<div class="entry-main">' +
+          '<div class="ename-row">' +
+            '<input class="name-input" data-id="' + e.id + '" data-field="name" value="' + (e.name || '').replace(/"/g,'&quot;') + '" placeholder="未命名案子">' +
+            '<span class="io-tag ' + e.io + '" data-id="' + e.id + '">' + (e.io === 'int' ? '內部' : '外部') + '</span>' +
+            '<span class="status-tag ' + (e.status === 'actual' ? 'actual' : 'planned') + '" data-id="' + e.id + '">' + (e.status === 'actual' ? '已發生' : '預計發生') + '</span>' +
+          '</div>' +
+          '<div class="entry-sub">' + catLabel(e.typeId) + '</div>' +
+        '</div>' +
+        '<input class="price-input" type="number" data-id="' + e.id + '" data-field="price" value="' + e.price + '">' +
+        '<input class="qty-input" type="number" min="1" data-id="' + e.id + '" data-field="qty" value="' + e.qty + '">' +
+        '<div style="display:flex; align-items:center; gap:8px;">' +
+          '<div class="entry-subtotal">$' + fmt(e.price * e.qty) + '</div>' +
+          '<button class="entry-del" data-id="' + e.id + '">✕</button>' +
+        '</div>';
+      wrap.appendChild(row);
+    });
+
+    wrap.querySelectorAll('.name-input, .price-input, .qty-input').forEach(function(input){
+      input.addEventListener('change', function(){ updateEntry(this.dataset.id, this.dataset.field, this.value); });
+    });
+    wrap.querySelectorAll('.io-tag').forEach(function(tag){
+      tag.addEventListener('click', function(){ toggleIo(this.dataset.id); });
+    });
+    wrap.querySelectorAll('.status-tag').forEach(function(tag){
+      tag.addEventListener('click', function(){ toggleStatus(this.dataset.id); });
+    });
+    wrap.querySelectorAll('.entry-del').forEach(function(btn){
+      btn.addEventListener('click', function(){ deleteEntry(this.dataset.id); });
+    });
+  }
+
+  function render(){
+    renderMonthTabs();
+    renderTypeChips();
+    renderIoToggle();
+    renderStatusToggle();
+    renderDraftForm();
+    renderStats();
+    renderEntries();
+    renderYearSummary();
+  }
+
+  // ---------- Mutations ----------
+  function addEntry(){
+    var cat = CATALOG.find(function(c){ return c.id === state.selectedType; }) || CATALOG[0];
+    var price = parseFloat(state.draft.price);
+    var qty = parseInt(state.draft.qty, 10);
+    if (isNaN(price) || price < 0) price = cat.price;
+    if (isNaN(qty) || qty < 1) qty = 1;
+
+    var entry = {
+      id: uid(),
+      typeId: cat.id,
+      io: state.io,
+      status: state.draft.status === 'actual' ? 'actual' : 'planned',
+      name: state.draft.name.trim(),
+      price: price,
+      qty: qty
+    };
+    var y = state.year, m = state.month;
+    getMonthEntries(y, m).push(entry);
+
+    state.draft.name = '';
+    state.draft.qty = 1;
+    state.draft.price = cat.price;
+    state.draft.status = 'planned';
+
+    // Render immediately so the UI always responds, then persist
+    // asynchronously — a storage failure should never block the screen
+    // from updating or block further edits.
+    render();
+    persistYear(y);
+  }
+
+  function updateEntry(id, field, value){
+    var y = state.year, m = state.month;
+    var list = getMonthEntries(y, m);
+    var entry = list.find(function(e){ return e.id === id; });
+    if (!entry) return;
+    if (field === 'name') entry.name = value;
+    if (field === 'price'){ var p = parseFloat(value); entry.price = isNaN(p) ? 0 : p; }
+    if (field === 'qty'){ var q = parseInt(value, 10); entry.qty = (isNaN(q) || q < 1) ? 1 : q; }
+    render();
+    persistYear(y);
+  }
+
+  function toggleIo(id){
+    var y = state.year, m = state.month;
+    var list = getMonthEntries(y, m);
+    var entry = list.find(function(e){ return e.id === id; });
+    if (!entry) return;
+    entry.io = entry.io === 'ext' ? 'int' : 'ext';
+    render();
+    persistYear(y);
+  }
+
+  function toggleStatus(id){
+    var y = state.year, m = state.month;
+    var list = getMonthEntries(y, m);
+    var entry = list.find(function(e){ return e.id === id; });
+    if (!entry) return;
+    entry.status = entry.status === 'actual' ? 'planned' : 'actual';
+    render();
+    persistYear(y);
+  }
+
+  function deleteEntry(id){
+    var y = state.year, m = state.month;
+    var list = getMonthEntries(y, m);
+    state.records[y][m] = list.filter(function(e){ return e.id !== id; });
+    render();
+    persistYear(y);
+  }
+
+  // ---------- Events ----------
+  document.getElementById('yearPrev').addEventListener('click', function(){
+    state.year -= 1;
+    ensureYearLoaded(state.year).then(render);
+  });
+  document.getElementById('yearNext').addEventListener('click', function(){
+    state.year += 1;
+    ensureYearLoaded(state.year).then(render);
+  });
+
+  document.getElementById('ioExtBtn').addEventListener('click', function(){ state.io = 'ext'; renderIoToggle(); });
+  document.getElementById('ioIntBtn').addEventListener('click', function(){ state.io = 'int'; renderIoToggle(); });
+
+  document.getElementById('statusPlannedBtn').addEventListener('click', function(){ state.draft.status = 'planned'; renderStatusToggle(); });
+  document.getElementById('statusActualBtn').addEventListener('click', function(){ state.draft.status = 'actual'; renderStatusToggle(); });
+
+  document.getElementById('nameField').addEventListener('input', function(){ state.draft.name = this.value; });
+  document.getElementById('priceField').addEventListener('input', function(){ state.draft.price = this.value; });
+
+  document.getElementById('qtyMinus').addEventListener('click', function(){
+    state.draft.qty = Math.max(1, (parseInt(state.draft.qty,10) || 1) - 1);
+    document.getElementById('qtyVal').textContent = state.draft.qty;
+  });
+  document.getElementById('qtyPlus').addEventListener('click', function(){
+    state.draft.qty = (parseInt(state.draft.qty,10) || 1) + 1;
+    document.getElementById('qtyVal').textContent = state.draft.qty;
+  });
+
+  document.getElementById('submitBtn').addEventListener('click', addEntry);
+
+  // ---------- Init ----------
+  ensureYearLoaded(state.year).then(render);
+})();
+</script>
+</body>
+</html>
